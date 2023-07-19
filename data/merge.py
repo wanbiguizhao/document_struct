@@ -5,11 +5,11 @@ import re
 from PIL import Image 
 from collections import defaultdict
 import copy
+from tqdm import tqdm
 PROJECT_ROOT=os.path.dirname(
     os.path.dirname(
     os.path.abspath(__file__)))
 # infer_dir_list=os.listdir("infer")
-infer_dict={}
 def dump_json_data(data,data_path):
     with open(data_path,'w') as f:
         json.dump(data,f,ensure_ascii=False,indent=2)
@@ -57,15 +57,20 @@ def load_json_data(basic_dir):
     硬代码，文件夹中，pdf按照页分析，重新组织起来。
     """
     info_dict={}
-    for xdir in os.listdir(basic_dir):
+    for xdir in tqdm(os.listdir(basic_dir)):
         info_dict[xdir]={}
         for f_json_name in  os.listdir(f"{basic_dir}/{xdir}"):
 
             re_result=re.search("\d+-(?P<page_no>\d+).json",f_json_name)
             if re_result:
-                page_no=int(re_result.groupdict()['page_no'])
-                json_data=json.load(open(f"{basic_dir}/{xdir}/{f_json_name}","r"))
-                info_dict[xdir][page_no]=json_data
+                try:
+                    page_no=int(re_result.groupdict()['page_no'])
+                    json_data=json.load(open(f"{basic_dir}/{xdir}/{f_json_name}","r"))
+                    info_dict[xdir][page_no]=json_data
+                except Exception as e:
+                    print(e)
+                    del info_dict[xdir]
+                    break
                 #print(xdir,page_no,json_data)
     #print(info_dict)
     return info_dict
@@ -74,7 +79,7 @@ def load_image_data(basic_dir):
     硬代码，文件夹中，pdf按照页分析，重新组织起来。
     """
     info_dict={}
-    for xdir in os.listdir(basic_dir):
+    for xdir in tqdm(os.listdir(basic_dir)):
         info_dict[xdir]={}
         for f_png_name in  os.listdir(f"{basic_dir}/{xdir}"):
             re_result=re.search("\d+-(?P<page_no>\d+).png",f_png_name)
@@ -328,17 +333,25 @@ def merge_data():
     """
     按照pdf文档，把所有的识别数据和ocr数据组合起来。
     """
-    infer_data=load_json_data(f"{PROJECT_ROOT}/data/infer")
-    ocr_data=load_json_data(f"{PROJECT_ROOT}/data/ocr")
-    image_data=load_image_data(f"{PROJECT_ROOT}/data/image")
-    merge_root_path=f"{PROJECT_ROOT}/data/core"
+    # infer_data=load_json_data(f"{PROJECT_ROOT}/data/infer")
+    # ocr_data=load_json_data(f"{PROJECT_ROOT}/data/ocr")
+    # image_data=load_image_data(f"{PROJECT_ROOT}/data/image")
+    # merge_root_path=f"{PROJECT_ROOT}/data/core"
     os.makedirs(f"{PROJECT_ROOT}/data/core",exist_ok=True)
     merge_root_path=f"{PROJECT_ROOT}/data/core"
-    for company_code in infer_data.keys()&ocr_data.keys():
+    MEDIA_ROOT="/media/liukun/7764-4284/cninfo/CnInfoReports/pdfs"
+    infer_data=load_json_data(f"{MEDIA_ROOT}/ndbg_zy_infer")
+    ocr_data=load_json_data(f"{MEDIA_ROOT}/ndbg_zy_ocrs")
+    image_data=load_image_data(f"{MEDIA_ROOT}/ndbg_zy_images")
+
+    for company_code in tqdm(infer_data.keys()&ocr_data.keys(),desc="推理和ocr生成文本内容"):
         smart_mkdirs(f"{merge_root_path}/{company_code}")
-        doc_json=merge_one_doc(company_code,infer_data,ocr_data,image_data)
-        dump_json_data(doc_json,f"{merge_root_path}/{company_code}/doc.json")
-        text_json_data(doc_json,f"{merge_root_path}/{company_code}/doc.txt")#
+        try:
+            doc_json=merge_one_doc(company_code,infer_data,ocr_data,image_data)
+            dump_json_data(doc_json,f"{merge_root_path}/{company_code}/doc.json")
+            text_json_data(doc_json,f"{merge_root_path}/{company_code}/doc.txt")#
+        except Exception as e:
+            print(company_code,e)
 
 def page_printer():
     pass
