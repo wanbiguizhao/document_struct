@@ -9,11 +9,8 @@ from tqdm import tqdm
 PROJECT_ROOT=os.path.dirname(
     os.path.dirname(
     os.path.abspath(__file__)))
-# infer_dir_list=os.listdir("infer")
-def dump_json_data(data,data_path):
-    with open(data_path,'w') as f:
-        json.dump(data,f,ensure_ascii=False,indent=2)
-    pass 
+from data import load_json_data,dump_json_data,load_image_data,smart_mkdirs
+
 def text_json_data(data,data_path):
     """
     把解析出来的docjson的数据以txt的形式展现出来
@@ -52,54 +49,9 @@ def text_json_data(data,data_path):
 
 
 
-def load_json_data(basic_dir):
-    """
-    硬代码，文件夹中，pdf按照页分析，重新组织起来。
-    """
-    info_dict={}
-    for xdir in tqdm(os.listdir(basic_dir)):
-        info_dict[xdir]={}
-        for f_json_name in  os.listdir(f"{basic_dir}/{xdir}"):
 
-            re_result=re.search("\d+-(?P<page_no>\d+).json",f_json_name)
-            if re_result:
-                try:
-                    page_no=int(re_result.groupdict()['page_no'])
-                    json_data=json.load(open(f"{basic_dir}/{xdir}/{f_json_name}","r"))
-                    info_dict[xdir][page_no]=json_data
-                except Exception as e:
-                    print(e)
-                    del info_dict[xdir]
-                    break
-                #print(xdir,page_no,json_data)
-    #print(info_dict)
-    return info_dict
-def load_image_data(basic_dir):
-    """
-    硬代码，文件夹中，pdf按照页分析，重新组织起来。
-    """
-    info_dict={}
-    for xdir in tqdm(os.listdir(basic_dir)):
-        info_dict[xdir]={}
-        for f_png_name in  os.listdir(f"{basic_dir}/{xdir}"):
-            re_result=re.search("\d+-(?P<page_no>\d+).png",f_png_name)
-            if re_result:
-                page_no=int(re_result.groupdict()['page_no'])
-                img=Image.open(f"{basic_dir}/{xdir}/{f_png_name}")
-                json_data={"width":img.width,"height":img.height}
-                info_dict[xdir][page_no]=json_data
-                #print(xdir,page_no,json_data)
-    #print(info_dict)
-    return info_dict
-# ocr_dir_list=os.listdir("ocr")
-import shutil
-def smart_mkdirs(dir_path,rm=False):
-    if not os.path.exists(dir_path):
-        os.makedirs(dir_path)
-    elif rm:
-        shutil.rmtree(dir_path)
-        os.makedirs(dir_path)
-    
+
+
 def bb_intersection_over_union(boxA, boxB):
     boxA = [int(x) for x in boxA]
     boxB = [int(x) for x in boxB]
@@ -339,7 +291,7 @@ def merge_data():
     # merge_root_path=f"{PROJECT_ROOT}/data/core"
     os.makedirs(f"{PROJECT_ROOT}/data/core",exist_ok=True)
     merge_root_path=f"{PROJECT_ROOT}/data/core"
-    MEDIA_ROOT="/media/liukun/7764-4284/cninfo/CnInfoReports/pdfs"
+    MEDIA_ROOT="---/cninfo/CnInfoReports/pdfs"
     infer_data=load_json_data(f"{MEDIA_ROOT}/ndbg_zy_infer")
     ocr_data=load_json_data(f"{MEDIA_ROOT}/ndbg_zy_ocrs")
     image_data=load_image_data(f"{MEDIA_ROOT}/ndbg_zy_images")
