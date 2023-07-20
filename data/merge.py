@@ -10,7 +10,7 @@ PROJECT_ROOT=os.path.dirname(
     os.path.dirname(
     os.path.abspath(__file__)))
 from data import load_json_data,dump_json_data,load_image_data,smart_mkdirs
-
+from merge import MEDIA_ROOT
 def text_json_data(data,data_path):
     """
     把解析出来的docjson的数据以txt的形式展现出来
@@ -84,11 +84,7 @@ def get_intersection(boxA, boxB):
     
     
     return interArea
-def get_sub_graph(graph):
-    pass 
-    # 某个节点是可取消的。
-    # 某个节点的区域要发生变化。
-    # 之后重新再跑一下图
+
 def old_merge_data():
     """
     按照pdf文档，把所有的识别数据和ocr数据组合起来。
@@ -291,7 +287,6 @@ def merge_data():
     # merge_root_path=f"{PROJECT_ROOT}/data/core"
     os.makedirs(f"{PROJECT_ROOT}/data/core",exist_ok=True)
     merge_root_path=f"{PROJECT_ROOT}/data/core"
-    MEDIA_ROOT="---/cninfo/CnInfoReports/pdfs"
     infer_data=load_json_data(f"{MEDIA_ROOT}/ndbg_zy_infer")
     ocr_data=load_json_data(f"{MEDIA_ROOT}/ndbg_zy_ocrs")
     image_data=load_image_data(f"{MEDIA_ROOT}/ndbg_zy_images")
@@ -305,8 +300,7 @@ def merge_data():
         except Exception as e:
             print(company_code,e)
 
-def page_printer():
-    pass
+
 def merge_one_doc(company_code,infer_data,ocr_data,image_data):
 
     doc_file_info={}
@@ -382,9 +376,7 @@ def merge_one_doc(company_code,infer_data,ocr_data,image_data):
     #print(json.dumps(doc_file_info,ensure_ascii=False,indent=2))
     return doc_data   
     
-def process_doc_file(doc_dir_path):
-    pass 
-    
+
 
 
     # print(company_code_list)
