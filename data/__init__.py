@@ -3,7 +3,7 @@ from tqdm import tqdm
 import os
 import re
 from PIL import Image
-from config import MEDIA_ROOT
+from data.config import MEDIA_ROOT
 def dump_json_data(data,data_path):
     with open(data_path,'w') as f:
         json.dump(data,f,ensure_ascii=False,indent=2)

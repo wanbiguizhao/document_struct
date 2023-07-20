@@ -1,5 +1,5 @@
 # 裁剪表格中的图片
-from utils import get_image_list,smart_mkdirs
+from data.utils import get_image_list,smart_mkdirs
 from tqdm import tqdm
 import os
 import json

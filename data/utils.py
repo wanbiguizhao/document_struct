@@ -3,7 +3,10 @@ from tqdm import tqdm
 import os
 import re
 from PIL import Image
-from config import MEDIA_ROOT
+try:
+    from data.config import MEDIA_ROOT
+except:
+    from data.config import MEDIA_ROOT
 def dump_json_data(data,data_path):
     with open(data_path,'w') as f:
         json.dump(data,f,ensure_ascii=False,indent=2)
@@ -70,4 +73,32 @@ def smart_mkdirs(dir_path,rm=False):
     elif rm:
         shutil.rmtree(dir_path)
         os.makedirs(dir_path)
-    
+
+def load_doc_json_data(basic_dir):
+    """
+    硬代码，文件夹中，pdf按照页分析，重新组织起来。
+    """
+    info_dict={}
+    for xdir in tqdm(os.listdir(basic_dir)):
+        try:
+            info_dict[xdir]=json.load(open(f"{basic_dir}/{xdir}/doc.json","r"))
+        except Exception as e:
+            print(e)
+            #print(xdir,page_no,json_data)
+    #print(info_dict)
+    return info_dict
+
+
+def load_doc_text_data(basic_dir)->dict:
+    """
+    硬代码，文件夹中，pdf按照页分析，重新组织起来。
+    """
+    info_dict={}
+    for xdir in tqdm(os.listdir(basic_dir)):
+        try:
+            info_dict[xdir]=[ line.replace("\n","") for line in open(f"{basic_dir}/{xdir}/doc.txt","r").readlines() if "page_num" not in line] 
+        except Exception as e:
+            print(e)
+            #print(xdir,page_no,json_data)
+    #print(info_dict)
+    return info_dict
