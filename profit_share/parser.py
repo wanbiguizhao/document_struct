@@ -73,7 +73,32 @@ class ProfitSharingPlan:
             ie_f(),
     def get_output(self,id):
         return {"id":id,"entities":self.entities_list,'text':self.text,"relations":[],"Comments":[]}
-
+class ProfitSharingPlan02(ProfitSharingPlan):
+    """
+    识别特殊的：    公司经本次董事会审议通过的利润分配预案为：以利润分配方案未来实施时股权登记日的股本总额为基数，向全体股东每10股派发现金红利0.1元（含税），送红股0股（含税），以资本公积金向全体股东每10股转增0股。
+    总基数
+    """
+    def ie_cardinal_number(self):
+        """
+        利润分配的基数
+        """
+        pattern=re.compile("以(?P<zgj>.*?)为基数")
+        match=pattern.search(self.text)
+        if match:
+            regs=match.regs
+            self.entities_list.append({
+                "id":1,"label":"总基数S","start_offset":regs[1][0],"end_offset":regs[1][1],"value":match.group(1)
+            })
+def convert_pipline02():
+    current_path=os.path.dirname(os.path.abspath(__file__))
+    psp=ProfitSharingPlan02()
+    with open(f"{current_path}/lifen2.txt",'r') as rf,open(f"{current_path}/lifen2.jsonl",'w')as  wf:
+        i=1
+        for line in rf.readlines():
+            psp.set_input(line.replace("\n",""))
+            psp.run()
+            wf.write(json.dumps(psp.get_output(id=i),ensure_ascii=False)+"\n")
+            i+=1
 def convert_pipline01():
     current_path=os.path.dirname(os.path.abspath(__file__))
     psp=ProfitSharingPlan()
@@ -93,4 +118,4 @@ if __name__=="__main__":
     # psp.set_input("公司经本次董事会审议通过的利润分配预案为：以152,537,820为基数，向全体股东每10股派发现金红利20元（含税），每15股送红股0股（含税），以资本公积金向全体股东每10股转增5股。")
     # psp.run()
     # print(json.dumps(psp.get_output(),ensure_ascii=False))
-    convert_pipline01()
+    convert_pipline02()

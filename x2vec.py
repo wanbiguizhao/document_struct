@@ -2,8 +2,7 @@
 import chromadb
 from tqdm import tqdm
 # setup Chroma in-memory, for easy prototyping. Can add persistence easily!
-client = chromadb.Client()
-
+client = chromadb.PersistentClient("vecdb.db/vecdb.db")
 # Create collection. get_collection, get_or_create_collection, delete_collection also available!
 # collection = client.create_collection("ndbg_zy_2022")
 
@@ -45,7 +44,13 @@ def doc2vec_db():
     result=collection.query(query_vec)
     print(result)
     return collection
-
+def query_db():
+    collection = client.get_collection("ndbg_zy_2022")
+    query_vec=para2vec_model.encode("公司经本次董事会审议通过的利润分配预案为：以未来实施分配方案时股权登记日的总股本为基数，向全体股东每10股派发现金红利1元（含税），送红股0股（含税），以资本公积金向全体股东每10股转增0股").tolist()
+    result=collection.query(query_vec,n_results=50)
+    for doc in result["documents"][0]:
+        print(doc) 
+    #print(result["documents"])
 
 if __name__=="__main__":
-    doc2vec_db()
+    query_db()
