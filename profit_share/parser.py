@@ -1,5 +1,7 @@
 import re
 import inspect
+import json
+import os 
 class ProfitSharingPlan:
     """
     利润分配方案
@@ -10,6 +12,7 @@ class ProfitSharingPlan:
         self.ie_func_list=[f[1] for f in inspect.getmembers(self,predicate=inspect.ismethod) if f[0].startswith("ie_")] # 把所有的提取函数都集中起来运行
     def set_input(self,input_text):
         self.text=input_text
+        self.entities_list=[]
 
     def ie_bonus_share(self):
         """
@@ -67,15 +70,27 @@ class ProfitSharingPlan:
             })
     def run(self):
         for ie_f in self.ie_func_list:
-            ie_f()
-    def get_output(self):
-        pass
+            ie_f(),
+    def get_output(self,id):
+        return {"id":id,"entities":self.entities_list,'text':self.text,"relations":[],"Comments":[]}
+
+def convert_pipline01():
+    current_path=os.path.dirname(os.path.abspath(__file__))
+    psp=ProfitSharingPlan()
+    with open(f"{current_path}/lifen.txt",'r') as rf,open(f"{current_path}/lifen.jsonl",'w')as  wf:
+        i=1
+        for line in rf.readlines():
+            psp.set_input(line.replace("\n",""))
+            psp.run()
+            wf.write(json.dumps(psp.get_output(id=i),ensure_ascii=False)+"\n")
+            i+=1
 
 if __name__=="__main__":
-    psp=ProfitSharingPlan()
-    psp.set_input("公司经本次董事会审议通过的利润分配预案为：以152,537,820为基数，向全体股东每10股派发现金红利20元（含税），送红股0股（含税），以资本公积金向全体股东每10股转增5股。")
-    psp.run()
-    print(psp.entities_list)
-    psp.set_input("公司经本次董事会审议通过的利润分配预案为：以152,537,820为基数，向全体股东每10股派发现金红利20元（含税），每15股送红股0股（含税），以资本公积金向全体股东每10股转增5股。")
-    psp.run()
-    print(psp.entities_list)
+    # psp=ProfitSharingPlan()
+    # psp.set_input("公司经本次董事会审议通过的利润分配预案为：以152,537,820为基数，向全体股东每10股派发现金红利20元（含税），送红股0股（含税），以资本公积金向全体股东每10股转增5股。")
+    # psp.run()
+    # print(psp.entities_list)
+    # psp.set_input("公司经本次董事会审议通过的利润分配预案为：以152,537,820为基数，向全体股东每10股派发现金红利20元（含税），每15股送红股0股（含税），以资本公积金向全体股东每10股转增5股。")
+    # psp.run()
+    # print(json.dumps(psp.get_output(),ensure_ascii=False))
+    convert_pipline01()
