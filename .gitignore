@@ -165,3 +165,5 @@ data/*/**
 config.py
 
 *txt
+
+vecdb.db
