@@ -47,7 +47,7 @@ def infer_toc(doc_text_list,doc_name):
             # if re.match("(\d+年)|(%)",text):
             #     continue
             if rule(text.lstrip()):
-                if re.search("^\d\d\d\d年|^\d+%|\d+尺|\d+MWh",text.lstrip()):# "月" in text.lstrip() or "%" in text  :
+                if re.search("^\d\d\d\d年|^\d+%|\d+尺|\d+",text.lstrip()):# "月" in text.lstrip() or "%" in text  :
                     continue
                 
                 if hit_flag and len(text)<20:
