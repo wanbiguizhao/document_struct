@@ -10,7 +10,7 @@ PROJECT_ROOT=os.path.dirname(
     os.path.dirname(
     os.path.abspath(__file__)))
 from data import load_json_data,dump_json_data,load_image_data,smart_mkdirs
-from merge import MEDIA_ROOT
+from config import MEDIA_ROOT
 def text_json_data(data,data_path):
     """
     把解析出来的docjson的数据以txt的形式展现出来
@@ -150,28 +150,9 @@ def old_merge_data():
                         crash=True
                         graph[i][j]=1
                         max_position[i]=j
-                        # graph[i].append([
-                        #     j,
-                        #     iou,
-                        #     -layout_black_list[j][2],# 区域的面积，
-                        #     layout_black_list[j][5],# 置信度
-                        #     layout_black_list[j][6],# 类别
-                        # ])
                     else:
                         break
                     j=j+1
-                # if i in graph:
-                #     graph[i].append(j)
-                    # graph[i].insert(
-                    #     0,
-                    #     [
-                    #         i,
-                    #         1,
-                    #         -layout_black_list[i][2],# 区域的面积，
-                    #         layout_black_list[i][5],# 置信度
-                    #         layout_black_list[i][6],# 类别
-                    #     ]
-                    # )
                 i+=1
 
 
@@ -299,6 +280,103 @@ def merge_data():
             text_json_data(doc_json,f"{merge_root_path}/{company_code}/doc.txt")#
         except Exception as e:
             print(company_code,e)
+def batch_layoutlm_pdf():
+    """
+    批量的推理pdf的文档布局
+    """
+    def load_mupdf_data(root_path):
+        data={}
+        for json_file in os.listdir(root_path):
+            data[json_file[:6]]=json.load(open(f"{root_path}/{json_file}","r"))
+        return data
+
+    infer_data=load_json_data(f"{MEDIA_ROOT}/ndbg_zy_infer")
+    mupdf_data=load_mupdf_data(f"{PROJECT_ROOT}/data/mupdf")
+    merge_root_path=f"{PROJECT_ROOT}/data/core"
+    os.makedirs(f"{PROJECT_ROOT}/data/core",exist_ok=True)
+    for company_code in tqdm(infer_data.keys()&mupdf_data.keys(),desc="推理和ocr生成文本内容"):
+        smart_mkdirs(f"{merge_root_path}/{company_code}")
+        try:
+            doc_json=layoutlm_pdf(company_code,infer_data[company_code],mupdf_data[company_code])
+            dump_json_data(doc_json,f"{merge_root_path}/{company_code}/doc.json")
+            text_json_data(doc_json,f"{merge_root_path}/{company_code}/doc.txt")#
+        except Exception as e:
+            print(company_code,e)
+def layoutlm_pdf(company_code,infer_data,mupdf_words):
+    """
+    pdf 通过pymuf的words 的bbox
+    pdf 通过layoutLMV3的推理的布局
+    两者结合进行，生成pdf的布局,识别文章的段落。
+    """
+    doc_file_info={}
+    doc_data={
+        "meta_info":{
+        "company_code":company_code,
+        "page_count":len(infer_data),
+        },
+        "page_info":doc_file_info
+        }
+    for page_id in range(len(infer_data)):
+        doc_file_info[page_id+1]={}
+        layout_black_list=[]
+        page_width=1654
+        page_height=2339
+        page_infer_data=infer_data[page_id+1]
+        page_ocr_data=mupdf_words[str(page_id)]
+        for node in page_infer_data[0]["result"]:#[0]["value"]:
+            layout_black_list.append([
+                node["value"]["x"]*page_width*0.01,
+                node["value"]["y"]*page_height*0.01,
+                -node["value"]["width"]*node["value"]["height"],# 排序使用
+                node["value"]["width"]*page_width*0.01,
+                node["value"]["height"]*page_height*0.01,
+                node["score"],
+                node["value"]["rectanglelabels"][0]
+                ]
+            )
+        layout_black_list.sort(key= lambda x: (x[5],-x[2]),reverse=True)#准确率越高，面积越大，越靠前
+        ocr_mapping=defaultdict(list)
+        ocr_block_stack=[]
+        for node_index , node in enumerate(page_ocr_data["words_list"]):
+            x0,y0=node[0],node[1]
+            x1,y1=node[2],node[3]
+            ocr_area=(y1+1-y0)*(x1+1-x0)
+            for block_index,block in enumerate(layout_black_list):
+                bx0,by0=block[0],block[1]
+                bx1,by1=block[3]+block[0],block[4]+block[1]
+                is_area=get_intersection(
+                    [x0,y0,x1,y1]
+                    ,
+                    [bx0,by0,bx1,by1]
+                    )
+                if is_area/ocr_area>0.85:
+                    ocr_mapping[node_index].append(
+                        [block[-1],block[-2],block_index,node[4]]
+                    )
+                    if ocr_block_stack and ocr_block_stack[-1]["block_index"]==block_index:
+                        ocr_block_stack[-1]["content"].append(node[4])
+                        ocr_block_stack[-1]["location"].append([node[0],node[1],node[2],node[3]])
+                    else:
+                        ocr_block_stack.append(
+                            {
+                                "block_index":block_index,
+                                "content":[node[4]],
+                                "location":[[node[0],node[1],node[2],node[3]]],
+                                "type":block[-1]
+                            }
+                        )
+                    break# 确保每一个区域都可以被打上一个标签。
+            if len(ocr_mapping[node_index])==0:
+                ocr_block_stack.append(
+                            {
+                                "block_index":-1,
+                                "content":[node[4]],
+                                "location":[[node[0],node[1],node[2],node[3]]],
+                                "type":"unknow"
+                            }
+                        )
+        doc_file_info[page_id+1]["content"]=ocr_block_stack
+    return doc_data
 
 
 def merge_one_doc(company_code,infer_data,ocr_data,image_data):
@@ -381,4 +459,5 @@ def merge_one_doc(company_code,infer_data,ocr_data,image_data):
 
     # print(company_code_list)
 if __name__=="__main__":
-    merge_data()
+    #merge_data()
+    batch_layoutlm_pdf()
