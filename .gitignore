@@ -168,3 +168,4 @@ config.py
 
 vecdb.db
 .vscode
+*logs

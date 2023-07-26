@@ -28,7 +28,8 @@ def data_load(data_dir):
                 clear_text=text.removeprefix("\t").removesuffix("\n")
                 l=0
                 if text_level.strip().isdigit():
-                    l=int(text_level)
+                    if int(text_level)>=1 and int(text_level)<=3:
+                        l=int(text_level)
                     #data_info[file[:-4]].append([int(text_level),clear_text])
                 y_list.append(l)
                 #x_list.append(clear_text)
@@ -60,10 +61,28 @@ class TocDataset(Dataset):
     def __getitem__(self, idx):
         try:
             # idx = 1
-            return torch.tensor(self.data["x"][idx],dtype=torch.float),torch.tensor(self.data["y"][idx],dtype=torch.long)
+            return [torch.tensor(self.data["x"][idx],dtype=torch.float),torch.tensor(self.data["y"][idx],dtype=torch.long)]
         except Exception as e:
             print('Error occured while load data: %d' % idx)
             raise e
+import torch.nn.functional as F
+def collate_func(batch_data):
+    batch_size = len(batch_data)
+    seq_length=[0]*batch_size
+    max_seq_length=-1
+    for i in range(batch_size):
+        seq_length[i]=batch_data[i][0].size(0)
+    max_seq_length=max(seq_length)
+    mask_attention=torch.ones(batch_size,max_seq_length)
+     #[data[0] for data in  batch_data])
+    
+    for i in range(batch_size):
+        batch_data[i][0]=F.pad(batch_data[i][0],(0,0,0,max_seq_length-seq_length[i]))
+        batch_data[i][1]=F.pad(batch_data[i][1],(0,max_seq_length-seq_length[i]))
+        mask_attention[i][seq_length[i]:]=0
+    x_list_tensors=torch.cat([data[0].unsqueeze(0) for data in  batch_data], dim=0)
+    y_list_tensors=torch.cat([data[1].unsqueeze(0) for data in  batch_data], dim=0)
+    return x_list_tensors,y_list_tensors,mask_attention
 
 toc_ds=TocDataset(data_loder=data_load,data_dir="/home/liukun/multimodal/document_struct/toc/checked")
 if __name__=="__main__":
